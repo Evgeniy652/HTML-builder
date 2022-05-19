@@ -4,7 +4,15 @@ const path = require('path');
 const dir = path.join(__dirname, 'files');
 const copyDir = path.join(__dirname, 'files-copy');
 
-readDir();
+removeBeforeAndStart();
+
+function removeBeforeAndStart() {
+    fs.rm(copyDir, {
+        recursive: true,
+    }, (error) => {
+        readDir();
+    });
+}
 
 function readDir(_dir = dir, _copyDir = copyDir) {
     fs.readdir(_dir, { withFileTypes: true }, async (err, files) => {
@@ -13,24 +21,25 @@ function readDir(_dir = dir, _copyDir = copyDir) {
         } else {
             console.log("Показать все процессы копирования: ");
 
-            fs.mkdir(_copyDir, { recursive: true }, (err) => {
+            fs.mkdir(_copyDir, { recursive: true }, async (err) => {
                 if (err) {
                     console.log('boom', err);
+                    return;
+                }
+
+                for (const file of files) {
+                    const filePath = path.join(_dir, file.name);
+                    const copyFilePath = path.join(_copyDir, file.name);
+
+                    if (file.isFile()) {
+                        await copyFile(filePath, copyFilePath);
+
+                        console.log(`${filePath} -> ${copyFilePath}`);
+                    } else {
+                        readDir(filePath, copyFilePath)
+                    }
                 }
             });
-
-            for (const file of files) {
-                const filePath = path.join(_dir, file.name);
-                const copyFilePath = path.join(_copyDir, file.name);
-
-                if (file.isFile()) {
-                    await copyFile(filePath, copyFilePath);
-
-                    console.log(`${filePath} -> ${copyFilePath}`);
-                } else {
-                    readDir(filePath, copyFilePath)
-                }
-            }
         }
     });
 }
